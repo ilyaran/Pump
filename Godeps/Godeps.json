@@ -1,0 +1,23 @@
+{
+	"ImportPath": "github.com/ilyaran/Pump",
+	"GoVersion": "go1.9",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/disintegration/imaging",
+			"Rev": "243d2d8673c1225a6afceeb9b3b4423d485dc8df"
+		},
+		{
+			"ImportPath": "golang.org/x/image/bmp",
+			"Rev": "05f0a469d9f7c77399b53a6bab80983eb856b52e"
+		},
+		{
+			"ImportPath": "golang.org/x/image/tiff",
+			"Rev": "05f0a469d9f7c77399b53a6bab80983eb856b52e"
+		},
+		{
+			"ImportPath": "golang.org/x/image/tiff/lzw",
+			"Rev": "05f0a469d9f7c77399b53a6bab80983eb856b52e"
+		}
+	]
+}
