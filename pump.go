@@ -32,6 +32,8 @@ import (
 	"github.com/gorilla/mux"
 	pborman "github.com/pborman/uuid"
 	"net/url"
+	"time"
+	"mime/multipart"
 )
 // Command-line flags.
 var(
@@ -56,6 +58,10 @@ func main() {
 }
 
 func index (w http.ResponseWriter, r *http.Request){
+	t0:=time.Now()
+	defer func(){
+		fmt.Println("Benchmark:",time.Since(t0).Seconds(),"sec")
+	}()
 	uploadObj := Pump{Result:map[string]interface{}{}}
 	//r.Body = http.MaxBytesReader(w, r.Body, 12345678)
 	if r.ContentLength > 12345678 {
@@ -116,7 +122,7 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	}
 
 	response, err := http.Get(image_url.String())
-	fmt.Printf("%T",response.Body)
+	//fmt.Printf("%T",response.Body)
 	if err != nil {
 		s.Status=404
 		s.Result["get by url"]=err
@@ -276,12 +282,41 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 	//get a ref to the parsed multipart form
 	m := r.MultipartForm
 
-	//get the *fileheaders
-	files := m.File["files[]"]
-	for i, _ := range files {
+	saveFile:=func(done chan bool,i int,files *[]*multipart.FileHeader){
 
 		//for each fileheader, get a handle to the actual file
-		file, err := files[i].Open()
+		file, err := (*files)[i].Open()
+		//fmt.Printf("%T",file)
+		defer file.Close()
+		if err != nil {
+			s.Result["open file N"+strconv.Itoa(i)] = err
+			done <- false
+		}
+		//create destination file making sure the path is writeable.
+		filename  := (*files)[i].Filename
+
+		dst:=s.open_file(filename)
+		defer dst.Close()
+		//copy the uploaded file to the destination file
+		if _, err := io.Copy(dst, file); err != nil {
+			s.Result[filename+":copy file"]=err
+			done <- false
+		}
+		s.Result[filename]="ok"
+		done <- true
+	}
+
+	//get the *fileheaders
+	files := m.File["files[]"]
+	fmt.Printf(" %T  ",files)
+
+	done := make(chan bool, len(files))
+	for i, _ := range files {
+
+		go saveFile(done,i,&files)
+		//for each fileheader, get a handle to the actual file
+		/*file, err := files[i].Open()
+		//fmt.Printf("%T",file)
 		defer file.Close()
 		if err != nil {
 			s.Result["open file N"+strconv.Itoa(i)] = err
@@ -297,11 +332,17 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 			s.Result[filename+":copy file"]=err
 			continue
 		}
-		s.Result[filename]="ok"
+		s.Result[filename]="ok"*/
+	}
+
+	for i:=0;i<len(files);i++{
+		<-done
 	}
 
 	s.Status=200
 }
+
+
 
 func (s *Pump) open_file(filename string)(*os.File){
 	//open a file for writing
