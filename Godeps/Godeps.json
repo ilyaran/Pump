@@ -8,6 +8,16 @@
 			"Rev": "243d2d8673c1225a6afceeb9b3b4423d485dc8df"
 		},
 		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Comment": "v1.6.0-1-g2d5fef0",
+			"Rev": "2d5fef06b891c971b14aa6f71ca5ab6c03a36e0e"
+		},
+		{
+			"ImportPath": "github.com/pborman/uuid",
+			"Comment": "v1.1-4-ge533369",
+			"Rev": "e533369306653d193b93dae055f6083cbf8ba54f"
+		},
+		{
 			"ImportPath": "golang.org/x/image/bmp",
 			"Rev": "05f0a469d9f7c77399b53a6bab80983eb856b52e"
 		},
