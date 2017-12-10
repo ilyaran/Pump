@@ -57,13 +57,12 @@ func main() {
 
 func index (w http.ResponseWriter, r *http.Request){
 	uploadObj := Pump{Result:map[string]interface{}{}}
-
-	if r.ContentLength > 1234567 {
+	//r.Body = http.MaxBytesReader(w, r.Body, 12345678)
+	if r.ContentLength > 12345678 {
 		uploadObj.Status = 406
 		uploadObj.Result["error"] = "the input data exceeds limit"
 		return
 	}
-	//r.Body = http.MaxBytesReader(w, r.Body, 1234567)
 
 	if r.Method == "POST" {
 		switch mux.Vars(r)["method"] {
@@ -106,28 +105,7 @@ type Pump struct {
 
 }
 
-func (s *Pump) open_file(filename string)(*os.File){
-	//open a file for writing
-	newFile, err := os.Create(assetsPath+"/"+filename)
-	if err != nil {
-		s.Status=500
-		s.Result["open new file"]=err
-		return nil
-	}
-	return newFile
-}
-func (s *Pump) decode_image(body io.Reader)(string,error){
-	_, formatType, err := image.Decode(body)
-	if err != nil {
-		return "image decode",err
-	}
-	//check file type
-	if !(formatType == "jpg" || formatType == "jpeg" || formatType == "png" || formatType == "gif"){
-		return "file type",err
-	}
 
-	return fmt.Sprintf("%s.%s",pborman.NewRandom(), formatType),nil
-}
 func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	//url := "http://i.imgur.com/m1UIjW1.jpg"
 	image_url, err := url.ParseRequestURI(u)
@@ -325,7 +303,28 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 	s.Status=200
 }
 
+func (s *Pump) open_file(filename string)(*os.File){
+	//open a file for writing
+	newFile, err := os.Create(assetsPath+"/"+filename)
+	if err != nil {
+		s.Status=500
+		s.Result["open new file"]=err
+		return nil
+	}
+	return newFile
+}
+func (s *Pump) decode_image(body io.Reader)(string,error){
+	_, formatType, err := image.Decode(body)
+	if err != nil {
+		return "image decode",err
+	}
+	//check file type
+	if !(formatType == "jpg" || formatType == "jpeg" || formatType == "png" || formatType == "gif"){
+		return "file type",err
+	}
 
+	return fmt.Sprintf("%s.%s",pborman.NewRandom(), formatType),nil
+}
 
 
 func  form(w http.ResponseWriter, r *http.Request){
