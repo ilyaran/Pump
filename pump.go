@@ -33,7 +33,6 @@ import (
 	pborman "github.com/pborman/uuid"
 	"net/url"
 	"time"
-	"mime/multipart"
 )
 // Command-line flags.
 var(
@@ -83,7 +82,9 @@ func index (w http.ResponseWriter, r *http.Request){
 			if image_url!=""{
 				uploadObj.upload_url(image_url,w,r)
 			}
-		default				:	uploadObj.Status=http.StatusNoContent
+		case "bynary"					:
+			fmt.Println(r.FormValue("blob"))
+			//uploadObj.Status=http.StatusNoContent
 		}
 	}else if r.Method == "GET" {
 		filename:=mux.Vars(r)["filename"]
@@ -110,7 +111,6 @@ type Pump struct {
 	Result map[string]interface{}	`json:"result"`
 
 }
-
 
 func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	//url := "http://i.imgur.com/m1UIjW1.jpg"
@@ -282,10 +282,13 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 	//get a ref to the parsed multipart form
 	m := r.MultipartForm
 
-	saveFile:=func(done chan bool,i int,files *[]*multipart.FileHeader){
-
+	//get the *fileheaders
+	files := m.File["files[]"]
+	filesLen:=len(files)
+	done := make(chan bool, filesLen)
+	saveFile:=func(done chan bool,i int){
 		//for each fileheader, get a handle to the actual file
-		file, err := (*files)[i].Open()
+		file, err := files[i].Open()
 		//fmt.Printf("%T",file)
 		defer file.Close()
 		if err != nil {
@@ -293,7 +296,7 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 			done <- false
 		}
 		//create destination file making sure the path is writeable.
-		filename  := (*files)[i].Filename
+		filename  := files[i].Filename
 
 		dst:=s.open_file(filename)
 		defer dst.Close()
@@ -305,37 +308,10 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 		s.Result[filename]="ok"
 		done <- true
 	}
-
-	//get the *fileheaders
-	files := m.File["files[]"]
-	fmt.Printf(" %T  ",files)
-
-	done := make(chan bool, len(files))
-	for i, _ := range files {
-
-		go saveFile(done,i,&files)
-		//for each fileheader, get a handle to the actual file
-		/*file, err := files[i].Open()
-		//fmt.Printf("%T",file)
-		defer file.Close()
-		if err != nil {
-			s.Result["open file N"+strconv.Itoa(i)] = err
-			continue
-		}
-		//create destination file making sure the path is writeable.
-		filename  := files[i].Filename
-
-		dst:=s.open_file(filename)
-		defer dst.Close()
-		//copy the uploaded file to the destination file
-		if _, err := io.Copy(dst, file); err != nil {
-			s.Result[filename+":copy file"]=err
-			continue
-		}
-		s.Result[filename]="ok"*/
+	for i:=0;i<filesLen;i++{
+		go saveFile(done,i)
 	}
-
-	for i:=0;i<len(files);i++{
+	for i:=0;i<filesLen;i++{
 		<-done
 	}
 
