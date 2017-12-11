@@ -17,7 +17,7 @@ import (
 
 func TestPump(t *testing.T) {
 
-	response, err := http.Get("http://localhost:3008/thumb/asdf.jpg")
+	response, err := http.Get("http://johnaran:6060/thumb/asdf.jpg")
 	if err != nil {
 		t.Errorf("%v", response)
 		return
