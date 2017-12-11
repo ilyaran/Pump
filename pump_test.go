@@ -17,7 +17,7 @@ import (
 
 func TestPump(t *testing.T) {
 
-	response, err := http.Get("http://johnaran:6060/thumb/asdf.jpg")
+	response, err := http.Get("http://localhost:3008/thumb/asdf.jpg")
 	if err != nil {
 		t.Errorf("%v", response)
 		return
@@ -36,7 +36,7 @@ func TestPump(t *testing.T) {
 }
 
 func TestPumpPostBase64(t *testing.T){
-	request_url := "http://johnaran:6060/upload/base64"
+	request_url := "http://localhost:3008/upload/base64"
 	// 要 POST的 参数
 	form := url.Values{
 		"base64": {"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="},
@@ -62,7 +62,7 @@ func TestPumpPostMultipart(t *testing.T){
 	extraParams := map[string]string{
 		"title":       "A cat image",
 	}
-	request, err := newfileUploadRequest("http://johnaran:6060/upload/multipart", extraParams, "files[]", "img_2.jpg")
+	request, err := newfileUploadRequest("http://localhost:3008/upload/multipart", extraParams, "files[]", "img_2.jpg")
 	if err != nil {
 		log.Fatal(err)
 	}
