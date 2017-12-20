@@ -63,8 +63,8 @@ func index (w http.ResponseWriter, r *http.Request){
 	}()
 	uploadObj := Pump{Result:map[string]interface{}{}}
 	//r.Body = http.MaxBytesReader(w, r.Body, 12345678)
-	if r.ContentLength > 12345678 {
-		uploadObj.Status = 406
+	if r.ContentLength > 1024*1024*32 {
+		uploadObj.Status = http.StatusNotAcceptable
 		uploadObj.Result["error"] = "the input data exceeds limit"
 		return
 	}
@@ -116,7 +116,7 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	//url := "http://i.imgur.com/m1UIjW1.jpg"
 	image_url, err := url.ParseRequestURI(u)
 	if err != nil {
-		s.Status=406
+		s.Status=http.StatusNotAcceptable
 		s.Result["url"]="invalid"
 		return
 	}
@@ -124,7 +124,7 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	response, err := http.Get(image_url.String())
 	//fmt.Printf("%T",response.Body)
 	if err != nil {
-		s.Status=404
+		s.Status=http.StatusNotFound
 		s.Result["get by url"]=err
 		return
 	}
@@ -132,7 +132,7 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 
 	fileName,err := s.decode_image(response.Body)
 	if err!=nil{
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result[fileName]=err
 		return
 	}
@@ -144,12 +144,12 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 	_, err = io.Copy(newFile, response.Body)
 	if err != nil {
 		//log.Fatal(err)
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["error"]=err
 		return
 	}
 
-	s.Status=200
+	s.Status=http.StatusOK
 	s.Result["filename"]=fileName
 	s.Result["url"]=image_url.String()
 }
@@ -158,7 +158,7 @@ func (s *Pump) upload_url(u string,w http.ResponseWriter, r *http.Request){
 func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	_, err := os.Stat(f)
 	if os.IsNotExist(err){
-		s.Status=404
+		s.Status=http.StatusNotFound
 		s.Result[f]=f + " is not existing file"
 		return
 	}
@@ -169,7 +169,7 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	contentType := "application/octet-stream";
 	file, err := os.Open(f)
 	if err != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["error"]=err
 		//panic(err)
 		return
@@ -178,7 +178,7 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	buffer := make([]byte, 512)
 	n, err1 := file.Read(buffer)
 	if err1 != nil && err1 != io.EOF {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["error"]=err1
 		//panic(err1)
 		return
@@ -188,7 +188,7 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 
 	img, err2 := imaging.Open(f)
 	if err2 != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["error"]=err
 		//panic(err)
 		return
@@ -198,7 +198,7 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	buffer1 := new(bytes.Buffer)
 	if contentType == "image/jpeg" {
 		if err := jpeg.Encode(buffer1, thumb, nil); err != nil {
-			s.Status=500
+			s.Status=http.StatusInternalServerError
 			s.Result["error"]="unable to encode image."
 			//log.Println("unable to encode image.")
 			return
@@ -206,14 +206,14 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	}
 	if contentType == "image/gif" {
 		if err := gif.Encode(buffer1, thumb, nil); err != nil {
-			s.Status=500
+			s.Status=http.StatusInternalServerError
 			s.Result["error"]="unable to encode image."
 			return
 		}
 	}
 	if contentType == "image/png"{
 		if err := png.Encode(buffer1, thumb); err != nil {
-			s.Status=500
+			s.Status=http.StatusInternalServerError
 			s.Result["error"]="unable to encode image."
 			return
 		}
@@ -225,7 +225,7 @@ func (s *Pump)  thumb(f string, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(buffer1.Bytes())))
 
 	if _, err := w.Write(buffer1.Bytes()); err != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["error"]="unable to write image."
 		return
 	}
@@ -235,7 +235,7 @@ func  (s *Pump) upload_base64(img string, w http.ResponseWriter, r *http.Request
 
 	d1 := strings.SplitN(img, ",", 2)
 	if !strings.Contains(d1[0], ";base64") {
-		s.Status=406
+		s.Status=http.StatusNotAcceptable
 		s.Result["base64"]="invalid data"
 		return
 	}
@@ -243,14 +243,14 @@ func  (s *Pump) upload_base64(img string, w http.ResponseWriter, r *http.Request
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(d1[1]))
 	fileName,err := s.decode_image(reader)
 	if err!=nil{
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result[fileName]=err
 		return
 	}
 
 	d2, err := base64.StdEncoding.DecodeString(d1[1])
 	if err != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["base64 decode"]=err
 		return
 	}
@@ -261,21 +261,21 @@ func  (s *Pump) upload_base64(img string, w http.ResponseWriter, r *http.Request
 
 	_, err = newFile.Write(d2)
 	if err != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["write file"]=err
 		return
 	}
 
-	s.Status=200
+	s.Status=http.StatusOK
 	s.Result["filename"]=fileName
 }
 
 func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 
-	err := r.ParseMultipartForm(100000)
+	err := r.ParseMultipartForm(1024*1024*32)
 	if err != nil {
 		//http.Error(w, err.Error(), http.StatusInternalServerError)
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["parse multipart form"]=err
 		return
 	}
@@ -315,7 +315,7 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 		<-done
 	}
 
-	s.Status=200
+	s.Status=http.StatusOK
 }
 
 
@@ -324,7 +324,7 @@ func (s *Pump) open_file(filename string)(*os.File){
 	//open a file for writing
 	newFile, err := os.Create(assetsPath+"/"+filename)
 	if err != nil {
-		s.Status=500
+		s.Status=http.StatusInternalServerError
 		s.Result["open new file"]=err
 		return nil
 	}
