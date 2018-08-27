@@ -311,8 +311,19 @@ func  (s *Pump) upload_multipart(w http.ResponseWriter, r *http.Request){
 	for i:=0;i<filesLen;i++{
 		go saveFile(done,i)
 	}
-	for i:=0;i<filesLen;i++{
+	/*for i:=0; i<filesLen;{
+
+		i++
 		<-done
+	}*/
+	for i:=0; i<filesLen;{
+		select {
+		case <-done:
+			i++
+		default:
+			fmt.Print("*")
+			time.Sleep(1000)
+		}
 	}
 
 	s.Status=http.StatusOK
